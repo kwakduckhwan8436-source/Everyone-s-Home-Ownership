@@ -82,6 +82,7 @@ import xml.etree.ElementTree as ET
 import time
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 import anthropic
 
@@ -167,9 +168,37 @@ def verify(key: str = ""):
     gated = bool(_parse_access_keys())
     return {"valid": tier is not None, "tier": tier, "gated": gated}
 
-@app.get("/")
+@app.get("/health")
 def health():
     return {"ok": True, "model": MODEL, "realprice": bool(os.environ.get("MOLIT_SERVICE_KEY")), "gated": bool(_parse_access_keys())}
+
+@app.get("/", response_class=HTMLResponse)
+def home():
+    """index.html(앱)이 있으면 화면을 보여주고, 없으면 '어디를 찾았는지' 진단 JSON."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    tried = []
+    for base in (here, os.getcwd(), os.path.dirname(here)):
+        for name in ("index.html", "app-standalone-offline.html"):
+            fp = os.path.join(base, name)
+            tried.append(fp)
+            if os.path.exists(fp):
+                try:
+                    with open(fp, encoding="utf-8") as f:
+                        return HTMLResponse(f.read())
+                except Exception as e:
+                    return JSONResponse({"appReady": False, "error": "index.html 읽기 실패", "detail": str(e), "path": fp})
+    try:
+        files_here = os.listdir(here)
+    except Exception:
+        files_here = []
+    return JSONResponse({
+        "appReady": False,
+        "hint": "index.html(앱)을 main.py와 같은 폴더에 두고 재배포하세요.",
+        "lookedIn": here, "cwd": os.getcwd(),
+        "filesInMainDir": files_here,
+        "realprice": bool(os.environ.get("MOLIT_SERVICE_KEY")),
+        "gated": bool(_parse_access_keys()),
+    })
 
 
 @app.post("/explain")
