@@ -99,6 +99,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ===== 회원 등급별 접속키(선택) =====
+# ACCESS_KEYS 환경변수 형식:  코드1:premium,코드2:basic,코드3:premium
+#   - 미설정(빈 값)이면 게이트 OFF (모두 허용, 하위호환)
+def _parse_access_keys():
+    raw = os.environ.get("ACCESS_KEYS", "").strip()
+    m = {}
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if ":" in part:
+            code, tier = part.split(":", 1)
+            m[code.strip()] = tier.strip() or "basic"
+        else:
+            m[part] = "basic"
+    return m
+
+def _access_tier(key):
+    """key의 등급 반환. ACCESS_KEYS 미설정이면 항상 'premium'(게이트 OFF)."""
+    keys = _parse_access_keys()
+    if not keys:
+        return "premium"  # 게이트 미설정 = 제한 없음
+    if not key:
+        return None
+    return keys.get(key.strip())
+
+def _require_key(key):
+    """ACCESS_KEYS가 설정돼 있으면 유효한 키를 요구. 아니면 통과."""
+    keys = _parse_access_keys()
+    if not keys:
+        return  # 게이트 OFF
+    if not key or key.strip() not in keys:
+        raise HTTPException(403, "유효한 접속 코드가 필요합니다 (AI재테크연구소 회원 전용).")
+
+
 _client = None
 def client():
     global _client
@@ -125,9 +160,16 @@ def find_flagged(text: str, allowed: set) -> list:
     return sorted(n for n in found if len(n) > 1 and n not in allowed)
 
 
+@app.get("/verify")
+def verify(key: str = ""):
+    """접속 코드 검증 → 등급 반환. 프론트 게이트에서 사용."""
+    tier = _access_tier(key)
+    gated = bool(_parse_access_keys())
+    return {"valid": tier is not None, "tier": tier, "gated": gated}
+
 @app.get("/")
 def health():
-    return {"ok": True, "model": MODEL, "realprice": bool(os.environ.get("MOLIT_SERVICE_KEY"))}
+    return {"ok": True, "model": MODEL, "realprice": bool(os.environ.get("MOLIT_SERVICE_KEY")), "gated": bool(_parse_access_keys())}
 
 
 @app.post("/explain")
@@ -152,7 +194,8 @@ def _txt(item, tag: str) -> str:
 
 
 @app.get("/realprice")
-def realprice(lawd_cd: str, deal_ymd: str, rows: int = 40, area_min: float = 0.0, area_max: float = 0.0, apt_query: str = "", floor_min: int = 0, floor_max: int = 0):
+def realprice(lawd_cd: str, deal_ymd: str, rows: int = 40, area_min: float = 0.0, area_max: float = 0.0, apt_query: str = "", floor_min: int = 0, floor_max: int = 0, key: str = ""):
+    _require_key(key)
     """국토교통부 아파트 매매 실거래가 (공공데이터포털, 무료).
     lawd_cd: 법정동코드 앞 5자리(예 11110=서울 종로구), deal_ymd: 계약년월 YYYYMM(예 202608)."""
     key = os.environ.get("MOLIT_SERVICE_KEY")
@@ -243,7 +286,8 @@ def _prev_ym(ym: str, k: int) -> str:
 
 
 @app.get("/realprice_avg")
-def realprice_avg(lawd_cd: str, months: int = 3, base_ymd: str = "", area_min: float = 0.0, area_max: float = 0.0, apt_query: str = "", floor_min: int = 0, floor_max: int = 0):
+def realprice_avg(lawd_cd: str, months: int = 3, base_ymd: str = "", area_min: float = 0.0, area_max: float = 0.0, apt_query: str = "", floor_min: int = 0, floor_max: int = 0, key: str = ""):
+    _require_key(key)
     """최근 N개월(기본 3, 신고지연 감안해 지난달부터) 아파트 매매 실거래가 평균.
     lawd_cd: 법정동코드 앞 5자리. base_ymd 미지정 시 '지난달'부터 거슬러 N개월."""
     key = os.environ.get("MOLIT_SERVICE_KEY")
@@ -262,7 +306,7 @@ def realprice_avg(lawd_cd: str, months: int = 3, base_ymd: str = "", area_min: f
     for k in range(months):
         ym = _prev_ym(base, k)
         try:
-            data = realprice(lawd_cd, ym, rows=1000, area_min=area_min, area_max=area_max, apt_query=apt_query, floor_min=floor_min, floor_max=floor_max)
+            data = realprice(lawd_cd, ym, rows=1000, area_min=area_min, area_max=area_max, apt_query=apt_query, floor_min=floor_min, floor_max=floor_max, key=key)
             vals = [x["amountMan"] for x in data["deals"] if x["amountMan"]]
             pyv = _pyeong_vals(data["deals"])
         except HTTPException:

@@ -785,6 +785,21 @@ header{position:sticky!important;top:0;z-index:40!important}
 .view-toggle button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .view-toggle .vt-hint{font-size:11.5px;color:var(--ink-3)}
 @media(max-width:640px){ .view-toggle .vt-hint{flex-basis:100%;margin-top:2px} }
+.gate{position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#1f2b3a,#0f1720);display:flex;align-items:center;justify-content:center;padding:20px}
+.gate-box{background:var(--card,#fff);border:1px solid var(--line,#e5e7eb);border-radius:18px;padding:28px 26px;max-width:380px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.4);text-align:center}
+.gate-logo{font-weight:800;color:var(--accent-ink,#8a6412);margin-bottom:6px;font-size:14px}
+.gate-box h2{font-size:19px;margin:4px 0 8px;color:var(--ink,#1f2937)}
+.gate-desc{font-size:13px;color:var(--ink-2,#4b5563);line-height:1.55;margin-bottom:16px}
+.gate-f{text-align:left;margin-bottom:10px}
+.gate-f label{display:block;font-size:12px;font-weight:700;color:var(--ink-2,#4b5563);margin-bottom:4px}
+.gate-f input{width:100%;border:1.5px solid var(--line,#e5e7eb);border-radius:10px;padding:10px 12px;font-size:14px;box-sizing:border-box}
+.gate-msg{font-size:12.5px;min-height:18px;margin:4px 0 8px;color:var(--ink-3,#6b7280)}
+.gate-msg.err{color:#c0392b}
+.gate-msg.ok{color:#2e8b57}
+.gate-btn{width:100%;justify-content:center;margin-top:4px}
+.gate-link{display:inline-block;margin-top:14px;font-size:12px;color:var(--accent-ink,#8a6412);text-decoration:none}
+body.gated{overflow:hidden}
+body:not(.tier-premium) [data-premium]{display:none!important}
 
 </style></head>
 <body>
@@ -1192,13 +1207,84 @@ function App() {
             catch { /* offline */ }
         })();
     }, []);
+    // ===== 회원 전용 접속 게이트 =====
+    const GATE_ENABLED = true;
+    const [gated, setGated] = (0, react_1.useState)(() => { if (!GATE_ENABLED)
+        return false; try {
+        const a = JSON.parse(localStorage.getItem('modu_access') || 'null');
+        return !(a && a.tier);
+    }
+    catch {
+        return true;
+    } });
+    const [gProxy, setGProxy] = (0, react_1.useState)(() => { try {
+        return localStorage.getItem('modu_proxy') || '';
+    }
+    catch {
+        return '';
+    } });
+    const [gCode, setGCode] = (0, react_1.useState)('');
+    const [gMsg, setGMsg] = (0, react_1.useState)({ t: '', c: '' });
+    (0, react_1.useEffect)(() => {
+        try {
+            const a = JSON.parse(localStorage.getItem('modu_access') || 'null');
+            const tier = (a && a.tier) ? a.tier : (GATE_ENABLED ? 'basic' : 'premium');
+            document.body.classList.remove('tier-basic', 'tier-premium');
+            document.body.classList.add(tier === 'premium' ? 'tier-premium' : 'tier-basic');
+            document.body.classList.toggle('gated', gated);
+        }
+        catch { /* noop */ }
+    }, [gated]);
+    const submitGate = async () => {
+        const proxy = (gProxy || localStorage.getItem('modu_proxy') || '').trim().replace(/\/$/, '');
+        const code = gCode.trim();
+        if (!proxy) {
+            setGMsg({ t: '서버 주소를 입력하세요.', c: 'err' });
+            return;
+        }
+        if (!code) {
+            setGMsg({ t: '접속 코드를 입력하세요.', c: 'err' });
+            return;
+        }
+        setGMsg({ t: '확인 중…', c: '' });
+        try {
+            try {
+                localStorage.setItem('modu_proxy', proxy);
+            }
+            catch { /* noop */ }
+            const r = await fetch(proxy + '/verify?key=' + encodeURIComponent(code));
+            if (!r.ok) {
+                setGMsg({ t: '서버 응답 오류(' + r.status + '). 주소를 확인하세요.', c: 'err' });
+                return;
+            }
+            const j = await r.json();
+            if (j && j.valid) {
+                const tier = j.tier || 'basic';
+                try {
+                    localStorage.setItem('modu_access', JSON.stringify({ key: code, tier, ts: Date.now() }));
+                }
+                catch { /* noop */ }
+                document.body.classList.remove('tier-basic', 'tier-premium');
+                document.body.classList.add(tier === 'premium' ? 'tier-premium' : 'tier-basic');
+                setGMsg({ t: '환영합니다! (' + (tier === 'premium' ? '정회원' : '회원') + ')', c: 'ok' });
+                setGated(false);
+            }
+            else {
+                setGMsg({ t: '유효하지 않은 코드예요. 카페에서 받은 코드를 확인하세요.', c: 'err' });
+            }
+        }
+        catch {
+            setGMsg({ t: '서버 연결 실패. 인터넷·서버 주소를 확인하세요.', c: 'err' });
+        }
+    };
     const [versions, setVersions] = (0, react_1.useState)(['2026-08']);
     const [ver, setVer] = (0, react_1.useState)('2026-08');
     (0, react_1.useEffect)(() => { (0, loader_ts_1.loadManifest)().then(m => { setVersions(m.versions); setVer(m.latest); }).catch(() => { }); }, []);
     (0, react_1.useEffect)(() => { (0, loader_ts_1.loadPolicy)(ver).then(setPolicy).catch(() => { }); }, [ver, setPolicy]);
     const stale = policy ? (0, loader_ts_1.isPolicyStale)(policy) : false;
     const days = policy ? Math.floor((Date.now() - Date.parse(policy.verifiedAt)) / 86400000) : 0;
-    return (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsxs)("div", { className: "bg-anim", "aria-hidden": "true", children: [(0, jsx_runtime_1.jsx)("div", { className: "cloud c1" }), (0, jsx_runtime_1.jsx)("div", { className: "cloud c2" }), (0, jsx_runtime_1.jsx)("div", { className: "cloud c3" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t1" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t2" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t3" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t4" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t5" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t6" }), (0, jsx_runtime_1.jsx)("div", { className: "train", children: (0, jsx_runtime_1.jsx)("div", { className: "tbody" }) }), (0, jsx_runtime_1.jsxs)("div", { className: "car cA", children: [(0, jsx_runtime_1.jsx)("div", { className: "body" }), (0, jsx_runtime_1.jsx)("div", { className: "w w1" }), (0, jsx_runtime_1.jsx)("div", { className: "w w2" }), (0, jsx_runtime_1.jsx)("div", { className: "hl" })] }), (0, jsx_runtime_1.jsxs)("div", { className: "car cB", children: [(0, jsx_runtime_1.jsx)("div", { className: "body" }), (0, jsx_runtime_1.jsx)("div", { className: "w w1" }), (0, jsx_runtime_1.jsx)("div", { className: "w w2" }), (0, jsx_runtime_1.jsx)("div", { className: "hl" })] }), (0, jsx_runtime_1.jsxs)("div", { className: "car cC", children: [(0, jsx_runtime_1.jsx)("div", { className: "body" }), (0, jsx_runtime_1.jsx)("div", { className: "w w1" }), (0, jsx_runtime_1.jsx)("div", { className: "w w2" }), (0, jsx_runtime_1.jsx)("div", { className: "hl" })] }), (0, jsx_runtime_1.jsx)("div", { className: "walker wA", children: (0, jsx_runtime_1.jsxs)("div", { className: "person", children: [(0, jsx_runtime_1.jsx)("div", { className: "head" }), (0, jsx_runtime_1.jsx)("div", { className: "torso" }), (0, jsx_runtime_1.jsx)("div", { className: "leg l" }), (0, jsx_runtime_1.jsx)("div", { className: "leg r" })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "walker wB", children: (0, jsx_runtime_1.jsxs)("div", { className: "person", children: [(0, jsx_runtime_1.jsx)("div", { className: "head" }), (0, jsx_runtime_1.jsx)("div", { className: "torso" }), (0, jsx_runtime_1.jsx)("div", { className: "leg l" }), (0, jsx_runtime_1.jsx)("div", { className: "leg r" })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "walker wC", children: (0, jsx_runtime_1.jsxs)("div", { className: "person", children: [(0, jsx_runtime_1.jsx)("div", { className: "head" }), (0, jsx_runtime_1.jsx)("div", { className: "torso" }), (0, jsx_runtime_1.jsx)("div", { className: "leg l" }), (0, jsx_runtime_1.jsx)("div", { className: "leg r" })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "walker wD", children: (0, jsx_runtime_1.jsxs)("div", { className: "person", children: [(0, jsx_runtime_1.jsx)("div", { className: "head" }), (0, jsx_runtime_1.jsx)("div", { className: "torso" }), (0, jsx_runtime_1.jsx)("div", { className: "leg l" }), (0, jsx_runtime_1.jsx)("div", { className: "leg r" })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "walker wE", children: (0, jsx_runtime_1.jsxs)("div", { className: "person", children: [(0, jsx_runtime_1.jsx)("div", { className: "head" }), (0, jsx_runtime_1.jsx)("div", { className: "torso" }), (0, jsx_runtime_1.jsx)("div", { className: "leg l" }), (0, jsx_runtime_1.jsx)("div", { className: "leg r" })] }) })] }), (0, jsx_runtime_1.jsx)("header", { children: (0, jsx_runtime_1.jsxs)("div", { className: "head-in", children: [(0, jsx_runtime_1.jsxs)("div", { className: "logo", children: [(0, jsx_runtime_1.jsx)("span", { className: "mark", children: (0, jsx_runtime_1.jsxs)("svg", { viewBox: "0 0 24 24", width: "17", height: "17", fill: "none", stroke: "#fff", strokeWidth: 2.2, strokeLinecap: "round", strokeLinejoin: "round", children: [(0, jsx_runtime_1.jsx)("path", { d: "M3 11.5 12 4l9 7.5" }), (0, jsx_runtime_1.jsx)("path", { d: "M5 10v9h14v-9" }), (0, jsx_runtime_1.jsx)("rect", { x: "10", y: "13", width: "4", height: "6" })] }) }), "\uBAA8\uB450\uC758 \uB0B4\uC9D1\uB9C8\uB828"] }), visitors && (0, jsx_runtime_1.jsx)("span", { className: "visitors", "aria-live": "polite", children: visitors }), (0, jsx_runtime_1.jsx)("button", { className: "sky-btn", "aria-label": "\uBC30\uACBD \uBD84\uC704\uAE30 \uC804\uD658(\uC790\uB3D9/\uC544\uCE68/\uB0AE/\uB178\uC744/\uBC24)", title: `배경: ${SKY_KO[skyMode]} (눌러서 전환)`, onClick: cycleSky, children: SKY_EMOJI[skyMode] }), (0, jsx_runtime_1.jsx)("div", { className: "head-spacer" }), policy && (0, jsx_runtime_1.jsxs)("span", { className: `badge${stale ? ' stale' : ''}`, children: [(0, jsx_runtime_1.jsx)("span", { className: "dot" }), (0, jsx_runtime_1.jsx)("span", { children: stale ? `정책 확인 필요 · 검증 후 ${days}일` : `정책 ${policy.version} · 검증 ${days}일 전` })] }), (0, jsx_runtime_1.jsx)("select", { className: "vsel", value: ver, onChange: e => setVer(e.target.value), title: "\uC815\uCC45 \uBC84\uC804", children: versions.map(v => (0, jsx_runtime_1.jsx)("option", { value: v, children: v }, v)) })] }) }), (0, jsx_runtime_1.jsxs)("nav", { className: "linkbar", "aria-label": "\uAD00\uB828 \uC11C\uBE44\uC2A4 \uBC14\uB85C\uAC00\uAE30", children: [(0, jsx_runtime_1.jsx)("a", { href: "https://cafe.naver.com/aiprogram1", target: "_blank", rel: "noopener noreferrer", children: "\uD83C\uDFDB\uFE0F AI\uC7AC\uD14C\uD06C\uC5F0\uAD6C\uC18C" }), (0, jsx_runtime_1.jsx)("a", { href: "https://ai-app-tech.onrender.com/", target: "_blank", rel: "noopener noreferrer", children: "\uD83D\uDDFA\uFE0F \uBD80\uC758 \uB85C\uB4DC\uB9F5" }), (0, jsx_runtime_1.jsx)("a", { href: "https://shared-research-monitor.onrender.com/", target: "_blank", rel: "noopener noreferrer", children: "\uD83D\uDD0E \uBAA8\uB450\uC758 \uB9AC\uC11C\uCE58" }), (0, jsx_runtime_1.jsx)("a", { href: "https://calculator-9zyb.onrender.com/", target: "_blank", rel: "noopener noreferrer", children: "\uD83E\uDDEE \uBAA8\uB450\uC758 \uACC4\uC0B0\uAE30" }), (0, jsx_runtime_1.jsx)("a", { href: "https://product-sourcing-1.onrender.com/", target: "_blank", rel: "noopener noreferrer", children: "\uD83D\uDCE6 \uC18C\uC2F1 \uC791\uC5C5\uB300" }), (0, jsx_runtime_1.jsx)("a", { href: "https://ai-app-tech.onrender.com/portfolio.html", target: "_blank", rel: "noopener noreferrer", children: "\uD83D\uDCBC \uC6D4\uAE09 \uD3EC\uD2B8\uD3F4\uB9AC\uC624" })] }), (0, jsx_runtime_1.jsxs)("div", { className: "app", children: [(0, jsx_runtime_1.jsx)(InputPanel_tsx_1.InputPanel, {}), (0, jsx_runtime_1.jsx)(Results_tsx_1.Results, {})] })] });
+    return (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [gated && (0, jsx_runtime_1.jsx)("div", { className: "gate", role: "dialog", "aria-modal": "true", "aria-label": "\uD68C\uC6D0 \uC804\uC6A9 \uC811\uC18D", children: (0, jsx_runtime_1.jsxs)("div", { className: "gate-box", children: [(0, jsx_runtime_1.jsx)("div", { className: "gate-logo", children: "\uD83C\uDFE0 \uBAA8\uB450\uC758 \uB0B4\uC9D1\uB9C8\uB828" }), (0, jsx_runtime_1.jsx)("h2", { children: "AI\uC7AC\uD14C\uD06C\uC5F0\uAD6C\uC18C \uD68C\uC6D0 \uC804\uC6A9" }), (0, jsx_runtime_1.jsxs)("p", { className: "gate-desc", children: ["\uD68C\uC6D0 \uB4F1\uAE09\uBCC4\uB85C \uC81C\uACF5\uB418\uB294 \uD504\uB85C\uADF8\uB7A8\uC785\uB2C8\uB2E4. \uCE74\uD398\uC5D0\uC11C \uBC1B\uC740 ", (0, jsx_runtime_1.jsx)("b", { children: "\uC811\uC18D \uCF54\uB4DC" }), "\uB97C \uC785\uB825\uD558\uC138\uC694."] }), !localStorage.getItem('modu_proxy') && (0, jsx_runtime_1.jsxs)("div", { className: "gate-f", children: [(0, jsx_runtime_1.jsx)("label", { children: "\uC11C\uBC84 \uC8FC\uC18C" }), (0, jsx_runtime_1.jsx)("input", { type: "text", placeholder: "https://\uB0B4\uD504\uB85D\uC2DC.onrender.com", value: gProxy, onChange: e => setGProxy(e.target.value) })] }), (0, jsx_runtime_1.jsxs)("div", { className: "gate-f", children: [(0, jsx_runtime_1.jsx)("label", { children: "\uC811\uC18D \uCF54\uB4DC" }), (0, jsx_runtime_1.jsx)("input", { type: "text", placeholder: "\uCE74\uD398\uC5D0\uC11C \uBC1B\uC740 \uCF54\uB4DC", autoComplete: "off", value: gCode, onChange: e => setGCode(e.target.value), onKeyDown: e => { if (e.key === 'Enter')
+                                        submitGate(); } })] }), (0, jsx_runtime_1.jsx)("div", { className: 'gate-msg ' + gMsg.c, "aria-live": "polite", children: gMsg.t }), (0, jsx_runtime_1.jsx)("button", { className: "btn accent gate-btn", type: "button", onClick: submitGate, children: "\uC785\uC7A5\uD558\uAE30" }), (0, jsx_runtime_1.jsx)("a", { className: "gate-link", href: "https://cafe.naver.com/aiprogram1", target: "_blank", rel: "noopener noreferrer", children: "\uCF54\uB4DC \uBB38\uC758 \u00B7 AI\uC7AC\uD14C\uD06C\uC5F0\uAD6C\uC18C \uCE74\uD398 \u2192" })] }) }), (0, jsx_runtime_1.jsxs)("div", { className: "bg-anim", "aria-hidden": "true", children: [(0, jsx_runtime_1.jsx)("div", { className: "cloud c1" }), (0, jsx_runtime_1.jsx)("div", { className: "cloud c2" }), (0, jsx_runtime_1.jsx)("div", { className: "cloud c3" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t1" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t2" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t3" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t4" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t5" }), (0, jsx_runtime_1.jsx)("div", { className: "tl t6" }), (0, jsx_runtime_1.jsx)("div", { className: "train", children: (0, jsx_runtime_1.jsx)("div", { className: "tbody" }) }), (0, jsx_runtime_1.jsxs)("div", { className: "car cA", children: [(0, jsx_runtime_1.jsx)("div", { className: "body" }), (0, jsx_runtime_1.jsx)("div", { className: "w w1" }), (0, jsx_runtime_1.jsx)("div", { className: "w w2" }), (0, jsx_runtime_1.jsx)("div", { className: "hl" })] }), (0, jsx_runtime_1.jsxs)("div", { className: "car cB", children: [(0, jsx_runtime_1.jsx)("div", { className: "body" }), (0, jsx_runtime_1.jsx)("div", { className: "w w1" }), (0, jsx_runtime_1.jsx)("div", { className: "w w2" }), (0, jsx_runtime_1.jsx)("div", { className: "hl" })] }), (0, jsx_runtime_1.jsxs)("div", { className: "car cC", children: [(0, jsx_runtime_1.jsx)("div", { className: "body" }), (0, jsx_runtime_1.jsx)("div", { className: "w w1" }), (0, jsx_runtime_1.jsx)("div", { className: "w w2" }), (0, jsx_runtime_1.jsx)("div", { className: "hl" })] }), (0, jsx_runtime_1.jsx)("div", { className: "walker wA", children: (0, jsx_runtime_1.jsxs)("div", { className: "person", children: [(0, jsx_runtime_1.jsx)("div", { className: "head" }), (0, jsx_runtime_1.jsx)("div", { className: "torso" }), (0, jsx_runtime_1.jsx)("div", { className: "leg l" }), (0, jsx_runtime_1.jsx)("div", { className: "leg r" })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "walker wB", children: (0, jsx_runtime_1.jsxs)("div", { className: "person", children: [(0, jsx_runtime_1.jsx)("div", { className: "head" }), (0, jsx_runtime_1.jsx)("div", { className: "torso" }), (0, jsx_runtime_1.jsx)("div", { className: "leg l" }), (0, jsx_runtime_1.jsx)("div", { className: "leg r" })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "walker wC", children: (0, jsx_runtime_1.jsxs)("div", { className: "person", children: [(0, jsx_runtime_1.jsx)("div", { className: "head" }), (0, jsx_runtime_1.jsx)("div", { className: "torso" }), (0, jsx_runtime_1.jsx)("div", { className: "leg l" }), (0, jsx_runtime_1.jsx)("div", { className: "leg r" })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "walker wD", children: (0, jsx_runtime_1.jsxs)("div", { className: "person", children: [(0, jsx_runtime_1.jsx)("div", { className: "head" }), (0, jsx_runtime_1.jsx)("div", { className: "torso" }), (0, jsx_runtime_1.jsx)("div", { className: "leg l" }), (0, jsx_runtime_1.jsx)("div", { className: "leg r" })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "walker wE", children: (0, jsx_runtime_1.jsxs)("div", { className: "person", children: [(0, jsx_runtime_1.jsx)("div", { className: "head" }), (0, jsx_runtime_1.jsx)("div", { className: "torso" }), (0, jsx_runtime_1.jsx)("div", { className: "leg l" }), (0, jsx_runtime_1.jsx)("div", { className: "leg r" })] }) })] }), (0, jsx_runtime_1.jsx)("header", { children: (0, jsx_runtime_1.jsxs)("div", { className: "head-in", children: [(0, jsx_runtime_1.jsxs)("div", { className: "logo", children: [(0, jsx_runtime_1.jsx)("span", { className: "mark", children: (0, jsx_runtime_1.jsxs)("svg", { viewBox: "0 0 24 24", width: "17", height: "17", fill: "none", stroke: "#fff", strokeWidth: 2.2, strokeLinecap: "round", strokeLinejoin: "round", children: [(0, jsx_runtime_1.jsx)("path", { d: "M3 11.5 12 4l9 7.5" }), (0, jsx_runtime_1.jsx)("path", { d: "M5 10v9h14v-9" }), (0, jsx_runtime_1.jsx)("rect", { x: "10", y: "13", width: "4", height: "6" })] }) }), "\uBAA8\uB450\uC758 \uB0B4\uC9D1\uB9C8\uB828"] }), visitors && (0, jsx_runtime_1.jsx)("span", { className: "visitors", "aria-live": "polite", children: visitors }), (0, jsx_runtime_1.jsx)("button", { className: "sky-btn", "aria-label": "\uBC30\uACBD \uBD84\uC704\uAE30 \uC804\uD658(\uC790\uB3D9/\uC544\uCE68/\uB0AE/\uB178\uC744/\uBC24)", title: `배경: ${SKY_KO[skyMode]} (눌러서 전환)`, onClick: cycleSky, children: SKY_EMOJI[skyMode] }), (0, jsx_runtime_1.jsx)("div", { className: "head-spacer" }), policy && (0, jsx_runtime_1.jsxs)("span", { className: `badge${stale ? ' stale' : ''}`, children: [(0, jsx_runtime_1.jsx)("span", { className: "dot" }), (0, jsx_runtime_1.jsx)("span", { children: stale ? `정책 확인 필요 · 검증 후 ${days}일` : `정책 ${policy.version} · 검증 ${days}일 전` })] }), (0, jsx_runtime_1.jsx)("select", { className: "vsel", value: ver, onChange: e => setVer(e.target.value), title: "\uC815\uCC45 \uBC84\uC804", children: versions.map(v => (0, jsx_runtime_1.jsx)("option", { value: v, children: v }, v)) })] }) }), (0, jsx_runtime_1.jsxs)("nav", { className: "linkbar", "aria-label": "\uAD00\uB828 \uC11C\uBE44\uC2A4 \uBC14\uB85C\uAC00\uAE30", children: [(0, jsx_runtime_1.jsx)("a", { href: "https://cafe.naver.com/aiprogram1", target: "_blank", rel: "noopener noreferrer", children: "\uD83C\uDFDB\uFE0F AI\uC7AC\uD14C\uD06C\uC5F0\uAD6C\uC18C" }), (0, jsx_runtime_1.jsx)("a", { href: "https://ai-app-tech.onrender.com/", target: "_blank", rel: "noopener noreferrer", children: "\uD83D\uDDFA\uFE0F \uBD80\uC758 \uB85C\uB4DC\uB9F5" }), (0, jsx_runtime_1.jsx)("a", { href: "https://shared-research-monitor.onrender.com/", target: "_blank", rel: "noopener noreferrer", children: "\uD83D\uDD0E \uBAA8\uB450\uC758 \uB9AC\uC11C\uCE58" }), (0, jsx_runtime_1.jsx)("a", { href: "https://calculator-9zyb.onrender.com/", target: "_blank", rel: "noopener noreferrer", children: "\uD83E\uDDEE \uBAA8\uB450\uC758 \uACC4\uC0B0\uAE30" }), (0, jsx_runtime_1.jsx)("a", { href: "https://product-sourcing-1.onrender.com/", target: "_blank", rel: "noopener noreferrer", children: "\uD83D\uDCE6 \uC18C\uC2F1 \uC791\uC5C5\uB300" }), (0, jsx_runtime_1.jsx)("a", { href: "https://ai-app-tech.onrender.com/portfolio.html", target: "_blank", rel: "noopener noreferrer", children: "\uD83D\uDCBC \uC6D4\uAE09 \uD3EC\uD2B8\uD3F4\uB9AC\uC624" })] }), (0, jsx_runtime_1.jsxs)("div", { className: "app", children: [(0, jsx_runtime_1.jsx)(InputPanel_tsx_1.InputPanel, {}), (0, jsx_runtime_1.jsx)(Results_tsx_1.Results, {})] })] });
 }
 
 });
@@ -1735,7 +1821,23 @@ const Tooltip_tsx_1 = require("../Tooltip");
 const lawdCodes_ts_1 = require("../../data/lawdCodes");
 function Realprice() {
     const setField = (0, store_ts_1.useStore)(s => s.setField);
-    const [proxy, setProxy] = (0, react_1.useState)('');
+    const [proxy, setProxy] = (0, react_1.useState)(() => { try {
+        return localStorage.getItem('modu_proxy') || '';
+    }
+    catch {
+        return '';
+    } });
+    (0, react_1.useEffect)(() => { try {
+        localStorage.setItem('modu_proxy', proxy.trim());
+    }
+    catch { /* noop */ } }, [proxy]);
+    const accessKey = () => { try {
+        const a = JSON.parse(localStorage.getItem('modu_access') || 'null');
+        return a && a.key ? a.key : '';
+    }
+    catch {
+        return '';
+    } };
     const AREA_BANDS = [
         { label: '전체 면적', min: 0, max: 0 },
         { label: '소형 ~60㎡ (~18평)', min: 0, max: 60 },
@@ -1863,7 +1965,7 @@ function Realprice() {
         try {
             const base = proxy.replace(/\/$/, '');
             const rows = await Promise.all(codes.map(async (code) => {
-                const res = await fetch(`${base}/realprice_avg?lawd_cd=${code}&months=3${areaQS()}`);
+                const res = await fetch(`${base}/realprice_avg?lawd_cd=${code}&months=3${areaQS()}&key=${encodeURIComponent(accessKey())}`);
                 if (!res.ok)
                     throw new Error(`HTTP ${res.status}`);
                 const j = await res.json();
@@ -1883,7 +1985,7 @@ function Realprice() {
         setAvg({ loading: true });
         try {
             const base = proxy.replace(/\/$/, '');
-            const res = await fetch(`${base}/realprice_avg?lawd_cd=${lawd}&months=3${areaQS()}`);
+            const res = await fetch(`${base}/realprice_avg?lawd_cd=${lawd}&months=3${areaQS()}&key=${encodeURIComponent(accessKey())}`);
             if (!res.ok)
                 throw new Error((await res.text()) || `HTTP ${res.status}`);
             setAvg(await res.json());
@@ -1900,7 +2002,7 @@ function Realprice() {
         setRp({ loading: true });
         try {
             const base = proxy.replace(/\/$/, '');
-            const res = await fetch(`${base}/realprice?lawd_cd=${lawd}&deal_ymd=${ym}${areaQS()}`);
+            const res = await fetch(`${base}/realprice?lawd_cd=${lawd}&deal_ymd=${ym}${areaQS()}&key=${encodeURIComponent(accessKey())}`);
             if (!res.ok)
                 throw new Error((await res.text()) || `HTTP ${res.status}`);
             setRp(await res.json());

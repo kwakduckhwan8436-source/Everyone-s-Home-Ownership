@@ -849,6 +849,25 @@ header{position:sticky!important;top:0;z-index:40!important}
 .view-toggle button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .view-toggle .vt-hint{font-size:11.5px;color:var(--ink-3)}
 @media(max-width:640px){ .view-toggle .vt-hint{flex-basis:100%;margin-top:2px} }
+
+/* 회원 전용 접속 게이트 */
+.gate{position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#1f2b3a,#0f1720);display:flex;align-items:center;justify-content:center;padding:20px}
+.gate-box{background:var(--card,#fff);border:1px solid var(--line,#e5e7eb);border-radius:18px;padding:28px 26px;max-width:380px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.4);text-align:center}
+.gate-logo{font-weight:800;color:var(--accent-ink,#8a6412);margin-bottom:6px;font-size:14px}
+.gate-box h2{font-size:19px;margin:4px 0 8px;color:var(--ink,#1f2937)}
+.gate-desc{font-size:13px;color:var(--ink-2,#4b5563);line-height:1.55;margin-bottom:16px}
+.gate-f{text-align:left;margin-bottom:10px}
+.gate-f label{display:block;font-size:12px;font-weight:700;color:var(--ink-2,#4b5563);margin-bottom:4px}
+.gate-f input{width:100%;border:1.5px solid var(--line,#e5e7eb);border-radius:10px;padding:10px 12px;font-size:14px;box-sizing:border-box}
+.gate-msg{font-size:12.5px;min-height:18px;margin:4px 0 8px;color:var(--ink-3,#6b7280)}
+.gate-msg.err{color:#c0392b}
+.gate-msg.ok{color:#2e8b57}
+.gate-btn{width:100%;justify-content:center;margin-top:4px}
+.gate-link{display:inline-block;margin-top:14px;font-size:12px;color:var(--accent-ink,#8a6412);text-decoration:none}
+body.gated{overflow:hidden}
+body.gated header,body.gated .linkbar,body.gated .app,body.gated footer{filter:blur(3px)}
+/* 등급별 프리미엄 기능 (basic이면 숨김) */
+body:not(.tier-premium) [data-premium]{display:none!important}
 </style>
 </head>
 <body>
@@ -864,6 +883,18 @@ header{position:sticky!important;top:0;z-index:40!important}
   <div class="walker wC"><div class="person"><div class="head"></div><div class="torso"></div><div class="leg l"></div><div class="leg r"></div></div></div>
   <div class="walker wD"><div class="person"><div class="head"></div><div class="torso"></div><div class="leg l"></div><div class="leg r"></div></div></div>
   <div class="walker wE"><div class="person"><div class="head"></div><div class="torso"></div><div class="leg l"></div><div class="leg r"></div></div></div>
+</div>
+<div id="gate" class="gate" style="display:none" role="dialog" aria-modal="true" aria-label="회원 전용 접속">
+  <div class="gate-box">
+    <div class="gate-logo">🏠 모두의 내집마련</div>
+    <h2>AI재테크연구소 회원 전용</h2>
+    <p class="gate-desc">회원 등급별로 제공되는 프로그램입니다. 카페에서 받은 <b>접속 코드</b>를 입력하세요.</p>
+    <div id="gateProxyWrap" class="gate-f"><label>서버 주소</label><input id="gateProxy" type="text" placeholder="https://내프록시.onrender.com"></div>
+    <div class="gate-f"><label>접속 코드</label><input id="gateCode" type="text" placeholder="카페에서 받은 코드" autocomplete="off" onkeydown="if(event.key==='Enter')submitGate()"></div>
+    <div id="gateMsg" class="gate-msg" aria-live="polite"></div>
+    <button class="btn accent gate-btn" type="button" onclick="submitGate()">입장하기</button>
+    <a class="gate-link" href="https://cafe.naver.com/aiprogram1" target="_blank" rel="noopener noreferrer">코드 문의 · AI재테크연구소 카페 →</a>
+  </div>
 </div>
 <header>
   <div class="head-in">
@@ -2050,6 +2081,24 @@ function _renderMcResultNow(){
       <div class="tiny muted" style="margin-top:6px">\u203b \ud655\ub960\u00b7\uc2dc\uae30\ub294 \uc704 \uac00\uc815\uc5d0 \ub530\ub978 \ucd94\uc815\uc774\uba70, \uc2e4\uc81c \uae08\ub9ac\u00b7\uc9d1\uac12\uc740 \ub2e4\ub974\uac8c \uc6c0\uc9c1\uc77c \uc218 \uc788\uc5b4\uc694.</div>`;
   }catch(e){ el.innerHTML = '<div class="tiny muted">\ud655\ub960 \uacc4\uc0b0\uc744 \ud45c\uc2dc\ud560 \uc218 \uc5c6\uc5b4\uc694.</div>'; }
 }
+async function loadRealAvg(){
+  var out=document.getElementById('rpResult'); if(!out) return;
+  var proxy=(((document.getElementById('rp_proxy')||{}).value)||'').trim().replace(/\/$/,'');
+  var lawd=(((document.getElementById('rp_lawd')||{}).value)||'').trim();
+  var ym=(((document.getElementById('rp_ym')||{}).value)||'').replace('-','');
+  if(!proxy){ out.innerHTML='<div class="reg-note on warn">ai-proxy 주소를 먼저 입력하세요 (예: https://내서비스.onrender.com).</div>'; return; }
+  if(!/^\d{5}$/.test(lawd)){ out.innerHTML='<div class="reg-note on warn">지역코드는 숫자 5자리예요 (예: 11110).</div>'; return; }
+  try{ localStorage.setItem('modu_proxy', proxy); }catch(e){}
+  out.innerHTML='<div class="tiny muted">조회 중…</div>';
+  try{
+    var url=proxy+'/realprice_avg?lawd_cd='+lawd+'&months=3'+(ym?('&base_ymd='+ym):'')+'&key='+encodeURIComponent(accessKey());
+    var r=await fetch(url);
+    if(!r.ok){ var t=await r.text(); out.innerHTML='<div class="reg-note on bad">조회 실패('+r.status+') · '+String(t).slice(0,140).replace(/</g,'&lt;')+'</div>'; return; }
+    var j=await r.json();
+    if(!j || j.count===0 || j.avgMan==null){ out.innerHTML='<div class="reg-note on warn">해당 기간 거래가 없어요. 다른 지역코드/월로 시도하세요.</div>'; return; }
+    out.innerHTML='<div class="reg-note on free">최근 3개월 평균 <b>'+won(j.avgMan)+'만원</b> · 중앙값 <b>'+won(j.medianMan)+'만원</b> · 거래 <b>'+j.count+'건</b>'+(j.medianPyeongMan?(' · 평당 <b>'+won(j.medianPyeongMan)+'만원</b>'):'')+'<br><span class="tiny">이 값을 왼쪽 <b>목표 주택가격</b>에 참고해 넣어보세요.</span></div>';
+  }catch(e){ out.innerHTML='<div class="reg-note on bad">조회 오류: '+e.message+' — 프록시 주소·CORS(ALLOW_ORIGIN)·서버 상태를 확인하세요.</div>'; }
+}
 function renderRealprice(){ var el=document.getElementById('pane-realprice'); if(!el) return; el.innerHTML = `<div class="card"><div class="ch"><span class="n">🏷️</span><h3>실제 시세·실거래가로 목표가 정하기</h3><span class="tip" data-tip="이 앱의 목표가는 직접 입력값이에요. 아래 공식 사이트에서 관심 지역의 실제 가격을 확인해 목표가에 반영하세요.">?</span></div>
       ${(()=>{ const sido=(document.getElementById('regSido')||{}).value||'', gugun=(document.getElementById('regGugun')||{}).value||''; const reg=(sido||gugun)?`선택 지역: <b>${sido} ${gugun&&!gugun.startsWith('전 지역')?gugun:''}</b>`:'왼쪽 <b>지역</b>을 먼저 고르면 더 정확해요'; return `<p class="tiny muted" style="margin:-4px 0 10px">${reg} · 아래는 <b>정부·공공기관 공식 데이터</b>예요(광고·가공 없음).</p>`; })()}
       <div class="link-list">
@@ -2057,7 +2106,17 @@ function renderRealprice(){ var el=document.getElementById('pane-realprice'); if
         <a class="olink" href="https://kbland.kr" target="_blank" rel="noopener noreferrer"><b>KB부동산 시세</b><span>은행 <b>대출한도(LTV)</b>의 기준이 되는 시세</span></a>
         <a class="olink" href="https://www.reb.or.kr" target="_blank" rel="noopener noreferrer"><b>한국부동산원</b><span>공식 <b>가격지수·통계</b>(시장 동향)</span></a>
       </div>
-      <div class="tiny muted" style="margin-top:8px">확인한 실제 시세를 왼쪽 <b>목표 주택가격</b>에 넣으면 계산이 더 정확해져요. <span style="opacity:.8">(공공데이터포털 실거래가 API 자동연동은 인증키·서버가 필요해 준비 중이에요.)</span></div></div>`; }
+      <div class="tiny muted" style="margin-top:8px">확인한 실제 시세를 왼쪽 <b>목표 주택가격</b>에 넣으면 계산이 더 정확해져요. <span style="opacity:.8">(아래에서 무료 API로 <b>평균 시세 자동조회</b>도 가능해요.)</span></div></div>
+    <div class="card" style="margin-top:16px"><div class="ch"><span class="n">🔗</span><h3>실거래가 자동조회 (무료 · 서버 연동)</h3><span class="tip" data-tip="공공데이터포털 국토부 아파트 매매 실거래가(무료)를 ai-proxy 서버로 불러와요. 서버에 MOLIT_SERVICE_KEY(무료 인증키)가 설정돼 있어야 해요.">?</span></div>
+      <p class="tiny muted" style="margin:-4px 0 10px">브라우저 직접호출은 CORS로 막혀 <b>ai-proxy(서버)</b> 경유가 필요해요. Render에 올린 프록시 주소를 넣으세요.</p>
+      <div class="region-row" style="flex-wrap:wrap;max-width:520px">
+        <div class="f" style="flex-basis:100%"><label>ai-proxy 주소</label><input id="rp_proxy" type="text" placeholder="https://내서비스.onrender.com" value="${(localStorage.getItem('modu_proxy')||'').replace(/"/g,'&quot;')}" oninput="try{localStorage.setItem('modu_proxy',this.value.trim())}catch(e){}"></div>
+        <div class="f"><label>지역코드 <span class="h">법정동 5자리</span></label><input id="rp_lawd" type="text" inputmode="numeric" placeholder="11110" value="11110"></div>
+        <div class="f"><label>기준 계약년월</label><input id="rp_ym" type="month" value="${nowYM()}"></div>
+      </div>
+      <button class="btn accent" type="button" style="margin-top:10px" onclick="loadRealAvg()">📊 최근 3개월 평균 시세 조회</button>
+      <div id="rpResult" style="margin-top:10px"></div>
+      <div class="tiny muted" style="margin-top:6px">법정동코드는 <a class="ilink" href="https://www.code.go.kr/stdcode/regCodeL.do" target="_blank" rel="noopener noreferrer" style="color:var(--accent-ink);font-weight:700">행정표준코드관리시스템</a>에서 확인 (예: 서울 종로구 11110)</div></div>`; }
 function renderStressCombo(){
   var el=document.getElementById('stressComboResult'); if(!el) return;
   el.innerHTML='<div class="tiny muted" style="padding:8px 0">계산 중…</div>';
@@ -2384,8 +2443,46 @@ function shareLink(){ try{ const url=location.origin+location.pathname+'#p='+enc
 function exportJSON(){ const b=new Blob([JSON.stringify(collectRaw(),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='모두의내집마련-계획.json'; a.click(); }
 function importJSON(e){ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ try{ applyRaw(JSON.parse(r.result)); recompute(); }catch(err){ alert('불러오기 실패: '+err.message); } }; r.readAsText(f); }
 
+
+/* ===== 회원 전용 접속 게이트 ===== */
+var GATE_ENABLED = true;  /* 게이트를 끄려면 false */
+function applyTier(tier){ document.body.classList.remove('tier-basic','tier-premium'); document.body.classList.add(tier==='premium'?'tier-premium':'tier-basic'); }
+function accessKey(){ try{ var a=JSON.parse(localStorage.getItem('modu_access')||'null'); return a&&a.key?a.key:''; }catch(e){ return ''; } }
+function initGate(){
+  if(!GATE_ENABLED){ applyTier('premium'); return true; }
+  var acc=null; try{ acc=JSON.parse(localStorage.getItem('modu_access')||'null'); }catch(e){}
+  if(acc && acc.tier){ applyTier(acc.tier); return true; }
+  var g=document.getElementById('gate'); if(!g){ applyTier('premium'); return true; }
+  var proxy=(localStorage.getItem('modu_proxy')||'');
+  if(proxy){ var pw=document.getElementById('gateProxyWrap'); if(pw) pw.style.display='none'; var gp=document.getElementById('gateProxy'); if(gp) gp.value=proxy; }
+  g.style.display='flex'; document.body.classList.add('gated');
+  return false;
+}
+async function submitGate(){
+  var msg=document.getElementById('gateMsg');
+  var proxy=(((document.getElementById('gateProxy')||{}).value)||localStorage.getItem('modu_proxy')||'').trim().replace(/\/$/,'');
+  var code=(((document.getElementById('gateCode')||{}).value)||'').trim();
+  if(!proxy){ msg.className='gate-msg err'; msg.textContent='서버 주소를 입력하세요.'; return; }
+  if(!code){ msg.className='gate-msg err'; msg.textContent='접속 코드를 입력하세요.'; return; }
+  msg.className='gate-msg'; msg.textContent='확인 중…';
+  try{
+    localStorage.setItem('modu_proxy', proxy);
+    var r=await fetch(proxy+'/verify?key='+encodeURIComponent(code));
+    if(!r.ok){ msg.className='gate-msg err'; msg.textContent='서버 응답 오류('+r.status+'). 주소를 확인하세요.'; return; }
+    var j=await r.json();
+    if(j && j.valid){
+      try{ localStorage.setItem('modu_access', JSON.stringify({key:code, tier:j.tier||'basic', ts:Date.now()})); }catch(e){}
+      applyTier(j.tier||'basic');
+      var g=document.getElementById('gate'); if(g) g.style.display='none'; document.body.classList.remove('gated');
+      msg.className='gate-msg ok'; msg.textContent='환영합니다! (' + (j.tier==='premium'?'정회원':'회원') + ')';
+    } else { msg.className='gate-msg err'; msg.textContent='유효하지 않은 코드예요. 카페에서 받은 코드를 확인하세요.'; }
+  }catch(e){ msg.className='gate-msg err'; msg.textContent='서버 연결 실패. 인터넷·서버 주소를 확인하세요.'; }
+}
+function resetAccess(){ try{ localStorage.removeItem('modu_access'); }catch(e){} location.reload(); }
+
 /* ---- init ---- */
 (function init(){
+  initGate();
   let fromHash=false;
   if(location.hash.indexOf('#p=')===0){ try{ applyRaw(JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(3)))))); fromHash=true; }catch(e){} }
   const saved=localStorage.getItem('modu_form_v3'); if(!fromHash && saved){ try{ applyRaw(JSON.parse(saved)); }catch(e){} }

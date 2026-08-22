@@ -780,3 +780,18 @@ header{position:sticky!important;top:0;z-index:40!important}
 .view-toggle button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .view-toggle .vt-hint{font-size:11.5px;color:var(--ink-3)}
 @media(max-width:640px){ .view-toggle .vt-hint{flex-basis:100%;margin-top:2px} }
+.gate{position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#1f2b3a,#0f1720);display:flex;align-items:center;justify-content:center;padding:20px}
+.gate-box{background:var(--card,#fff);border:1px solid var(--line,#e5e7eb);border-radius:18px;padding:28px 26px;max-width:380px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.4);text-align:center}
+.gate-logo{font-weight:800;color:var(--accent-ink,#8a6412);margin-bottom:6px;font-size:14px}
+.gate-box h2{font-size:19px;margin:4px 0 8px;color:var(--ink,#1f2937)}
+.gate-desc{font-size:13px;color:var(--ink-2,#4b5563);line-height:1.55;margin-bottom:16px}
+.gate-f{text-align:left;margin-bottom:10px}
+.gate-f label{display:block;font-size:12px;font-weight:700;color:var(--ink-2,#4b5563);margin-bottom:4px}
+.gate-f input{width:100%;border:1.5px solid var(--line,#e5e7eb);border-radius:10px;padding:10px 12px;font-size:14px;box-sizing:border-box}
+.gate-msg{font-size:12.5px;min-height:18px;margin:4px 0 8px;color:var(--ink-3,#6b7280)}
+.gate-msg.err{color:#c0392b}
+.gate-msg.ok{color:#2e8b57}
+.gate-btn{width:100%;justify-content:center;margin-top:4px}
+.gate-link{display:inline-block;margin-top:14px;font-size:12px;color:var(--accent-ink,#8a6412);text-decoration:none}
+body.gated{overflow:hidden}
+body:not(.tier-premium) [data-premium]{display:none!important}

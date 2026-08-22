@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../../state/store.ts';
 import { won, nowYM } from '../../engines/util.ts';
 import { Tip } from '../Tooltip.tsx';
@@ -6,7 +6,9 @@ import { LAWD_GROUPS } from '../../data/lawdCodes.ts';
 
 export function Realprice() {
   const setField = useStore(s => s.setField);
-  const [proxy, setProxy] = useState('');
+  const [proxy, setProxy] = useState(() => { try { return localStorage.getItem('modu_proxy') || ''; } catch { return ''; } });
+  useEffect(() => { try { localStorage.setItem('modu_proxy', proxy.trim()); } catch { /* noop */ } }, [proxy]);
+  const accessKey = () => { try { const a = JSON.parse(localStorage.getItem('modu_access') || 'null'); return a && a.key ? a.key : ''; } catch { return ''; } };
   const AREA_BANDS: { label: string; min: number; max: number }[] = [
     { label: '전체 면적', min: 0, max: 0 },
     { label: '소형 ~60㎡ (~18평)', min: 0, max: 60 },
@@ -120,7 +122,7 @@ export function Realprice() {
     try {
       const base = proxy.replace(/\/$/, '');
       const rows = await Promise.all(codes.map(async (code) => {
-        const res = await fetch(`${base}/realprice_avg?lawd_cd=${code}&months=3${areaQS()}`);
+        const res = await fetch(`${base}/realprice_avg?lawd_cd=${code}&months=3${areaQS()}&key=${encodeURIComponent(accessKey())}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const j = await res.json();
         return { code, name: nameByLawd(code), avgMan: j.avgMan ?? null, medianMan: j.medianMan ?? null, medianPyeongMan: j.medianPyeongMan ?? null, count: j.count ?? 0, perMonth: j.perMonth ?? [] };
@@ -135,7 +137,7 @@ export function Realprice() {
     setAvg({ loading: true });
     try {
       const base = proxy.replace(/\/$/, '');
-      const res = await fetch(`${base}/realprice_avg?lawd_cd=${lawd}&months=3${areaQS()}`);
+      const res = await fetch(`${base}/realprice_avg?lawd_cd=${lawd}&months=3${areaQS()}&key=${encodeURIComponent(accessKey())}`);
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
       setAvg(await res.json());
     } catch (e) {
@@ -147,7 +149,7 @@ export function Realprice() {
     setRp({ loading: true });
     try {
       const base = proxy.replace(/\/$/, '');
-      const res = await fetch(`${base}/realprice?lawd_cd=${lawd}&deal_ymd=${ym}${areaQS()}`);
+      const res = await fetch(`${base}/realprice?lawd_cd=${lawd}&deal_ymd=${ym}${areaQS()}&key=${encodeURIComponent(accessKey())}`);
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
       setRp(await res.json());
     } catch (e) {
