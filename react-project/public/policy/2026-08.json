@@ -1,0 +1,172 @@
+{
+  "version": "2026-08",
+  "verifiedAt": "2026-08-02",
+  "dsrLimit": 0.4,
+  "stressAddRate": 0.015,
+  "ltv": {
+    "regulated": 0.5,
+    "nonRegulated": 0.7,
+    "firstTime": 0.8
+  },
+  "regionCap": [
+    {
+      "maxPrice": 150000,
+      "cap": 60000
+    },
+    {
+      "maxPrice": 250000,
+      "cap": 40000
+    },
+    {
+      "maxPrice": null,
+      "cap": 20000
+    }
+  ],
+  "acqTax": {
+    "t1": 60000,
+    "t2": 90000,
+    "rateLow": 0.01,
+    "rateHigh": 0.03
+  },
+  "acqTaxReliefFirst": 200,
+  "acqTaxReliefNewborn": 550,
+  "newbornTaxWithinMonths": 60,
+  "brokerFee": [
+    {
+      "maxPrice": 50000,
+      "rate": 0.004
+    },
+    {
+      "maxPrice": 90000,
+      "rate": 0.005
+    },
+    {
+      "maxPrice": 120000,
+      "rate": 0.006
+    },
+    {
+      "maxPrice": null,
+      "rate": 0.007
+    }
+  ],
+  "legalFee": 120,
+  "reserveRate": 0.03,
+  "products": [
+    {
+      "key": "didimdol",
+      "name": "디딤돌대출",
+      "incomeMax": 6000,
+      "netWorthMax": 46900,
+      "priceMax": 50000,
+      "limit": 25000,
+      "rate": 0.032,
+      "needChild": false,
+      "childWithinMonths": 0
+    },
+    {
+      "key": "newborn",
+      "name": "신생아 특례 디딤돌",
+      "incomeMax": 20000,
+      "netWorthMax": 51100,
+      "priceMax": 60000,
+      "limit": 40000,
+      "rate": 0.02,
+      "needChild": true,
+      "childWithinMonths": 24
+    }
+  ],
+  "cheongyakScore": {
+    "homelessMax": 32,
+    "dependentsMax": 35,
+    "acctMax": 17
+  },
+  "meta": [
+    {
+      "k": "DSR 한도(제1금융권)",
+      "v": "40%",
+      "note": "금융위/금감원",
+      "conf": "high"
+    },
+    {
+      "k": "스트레스 DSR 가산금리",
+      "v": "+1.5%p",
+      "note": "3단계, 상품·기간별 상이",
+      "conf": "medium"
+    },
+    {
+      "k": "LTV(비규제/규제/생애최초)",
+      "v": "70% / 50% / 80%",
+      "note": "지역·가격구간별 차등",
+      "conf": "medium"
+    },
+    {
+      "k": "수도권 규제지역 대출총액 캡",
+      "v": "15억↓ 6억 / ~25억 4억 / 25억↑ 2억",
+      "note": "규제지역만 적용",
+      "conf": "medium"
+    },
+    {
+      "k": "취득세율",
+      "v": "6억↓ 1% · 6~9억 (가액×2/3−3)% · 9억↑ 3%",
+      "note": "지방세법 표준세율",
+      "conf": "high"
+    },
+    {
+      "k": "다주택 취득세 중과",
+      "v": "조정 2주택 8%·3주택+ 12% / 비조정 3주택 8%·4주택+ 12%",
+      "note": "일시적 2주택·지방저가주택 예외 있음. 지방교육세·농특세 단순화 → 원문확인",
+      "conf": "low"
+    },
+    {
+      "k": "전세→매매 브릿지",
+      "v": "만기 전 최대 6개월, 단기금리 5.5% 가정",
+      "note": "실제 브릿지론 한도·금리·가능 여부는 은행별 상이 → 상담 필요",
+      "conf": "medium"
+    },
+    {
+      "k": "생애최초 취득세 감면",
+      "v": "최대 200만",
+      "note": "12억↓·소득요건 폐지(2026)",
+      "conf": "medium"
+    },
+    {
+      "k": "신생아 취득세 감면",
+      "v": "최대 550만",
+      "note": "출산 5년 이내(지방교육세 포함)",
+      "conf": "medium"
+    },
+    {
+      "k": "디딤돌대출",
+      "v": "소득6천·순자산4.69억·주택5억·한도2.5억·3.2%",
+      "note": "출처 간 상이",
+      "conf": "low"
+    },
+    {
+      "k": "신생아 특례 디딤돌",
+      "v": "소득2억·순자산5.11억·주택6억·한도4억·2.0%",
+      "note": "출처마다 4억/5억·소득 1.3~2억 상이 → 원문확인",
+      "conf": "low"
+    },
+    {
+      "k": "청약 가점 배점",
+      "v": "무주택32+부양35+통장17=84",
+      "note": "개편 논의 중",
+      "conf": "low"
+    }
+  ],
+  "acqTaxHeavy": {
+    "regulated": {
+      "second": 0.08,
+      "thirdPlus": 0.12
+    },
+    "nonRegulated": {
+      "third": 0.08,
+      "fourthPlus": 0.12
+    },
+    "eduTaxRate": 0.004
+  },
+  "transition": {
+    "bridgeRate": 0.055,
+    "maxBridgeMonths": 6
+  }
+}
