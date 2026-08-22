@@ -178,7 +178,7 @@ def home():
     here = os.path.dirname(os.path.abspath(__file__))
     tried = []
     for base in (here, os.getcwd(), os.path.dirname(here)):
-        for name in ("index.html", "app-standalone-offline.html"):
+        for name in ("app-standalone-offline.html", "index.html"):
             fp = os.path.join(base, name)
             tried.append(fp)
             if os.path.exists(fp):
