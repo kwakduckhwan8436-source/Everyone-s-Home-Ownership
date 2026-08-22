@@ -868,6 +868,10 @@ body.gated{overflow:hidden}
 body.gated header,body.gated .linkbar,body.gated .app,body.gated footer{filter:blur(3px)}
 /* 등급별 프리미엄 기능 (basic이면 숨김) */
 body:not(.tier-premium) [data-premium]{display:none!important}
+
+/* 로그아웃 버튼: 로그인 상태에서만 노출 */
+#logoutBtn{display:none}
+body.tier-basic #logoutBtn,body.tier-premium #logoutBtn{display:inline-flex}
 </style>
 </head>
 <body>
@@ -901,6 +905,7 @@ body:not(.tier-premium) [data-premium]{display:none!important}
     <div class="logo"><span class="mark"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9h14v-9"/><rect x="10" y="13" width="4" height="6"/></svg></span>모두의 내집마련</div>
     <div class="head-spacer"></div>
     <span class="visitors" id="visitors" aria-live="polite"></span>
+    <button id="logoutBtn" class="sky-btn" type="button" onclick="resetAccess()" title="로그아웃 · 접속 코드 다시 입력" aria-label="로그아웃">🔒</button>
     <button id="skyToggle" class="sky-btn" onclick="toggleSky()" aria-label="배경 분위기 전환(낮/노을)" title="배경 분위기 전환">🌇</button><span class="badge" id="badge" onclick="switchTab('basis')" style="cursor:pointer" title="정책 근거 보기"><span class="dot"></span><span id="badgeText">정책 2026-08</span></span>
     <select class="vsel" id="vsel" title="정책 버전"></select>
   </div>
@@ -1346,21 +1351,30 @@ function loadScenario(i){ const a=loadPlans(); if(a[i]){ applyRaw(a[i].raw); if(
 function delScenario(i){ const a=loadPlans(); a.splice(i,1); savePlans(a); renderScenarios(); if(document.getElementById('cmpA')) renderCompare(); }
 async function initVisitors(){
   var el=document.getElementById('visitors'); if(!el) return;
+  // 기기 고유 ID (한 번만 생성 → 새로고침해도 동일 = 중복집계 방지)
+  var uid=''; try{ uid=localStorage.getItem('modu_uid')||''; if(!uid){ uid=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2)); localStorage.setItem('modu_uid', uid); } }catch(e){}
+  // 오프라인 표시: 세션당 1회만 반영(새로고침은 증가 안 함)
   var total=1, today=1;
   try{
-    total=(parseInt(localStorage.getItem('modu_visits')||'0',10)||0)+1; localStorage.setItem('modu_visits', String(total));
-    var d=new Date().toISOString().slice(0,10);
-    var last=localStorage.getItem('modu_visit_date');
-    today=((last===d)?(parseInt(localStorage.getItem('modu_today')||'0',10)||0):0)+1;
-    localStorage.setItem('modu_visit_date', d); localStorage.setItem('modu_today', String(today));
+    var day=new Date().toISOString().slice(0,10);
+    if(!sessionStorage.getItem('modu_counted')){
+      total=(parseInt(localStorage.getItem('modu_visits')||'0',10)||0)+1; localStorage.setItem('modu_visits', String(total));
+      var last=localStorage.getItem('modu_visit_date');
+      today=((last===day)?(parseInt(localStorage.getItem('modu_today')||'0',10)||0):0)+1;
+      localStorage.setItem('modu_visit_date', day); localStorage.setItem('modu_today', String(today));
+      sessionStorage.setItem('modu_counted','1');
+    } else {
+      total=parseInt(localStorage.getItem('modu_visits')||'1',10)||1;
+      today=parseInt(localStorage.getItem('modu_today')||'1',10)||1;
+    }
   }catch(e){}
   el.innerHTML='\uD83D\uDC65 \uCD1D <b>'+total.toLocaleString()+'</b> \u00B7 \uC624\uB298 <b>'+today.toLocaleString()+'</b>';
-  el.title='\uCD1D \uBC29\uBB38(\uC774 \uAE30\uAE30) \u00B7 \uC624\uB298 \uBC29\uBB38(\uC774 \uAE30\uAE30). \uC804\uCCB4 \uC9D1\uACC4\uB294 \uC11C\uBC84 \uC5F0\uB3D9 \uC2DC \uD45C\uC2DC\uB3FC\uC694.';
+  el.title='\uACE0\uC720 \uBC29\uBB38\uC790 \uAE30\uC900(\uC0C8\uB85C\uACE0\uCE68\uC740 \uC911\uBCF5 \uC81C\uC678). \uC11C\uBC84 \uC5F0\uB3D9 \uC2DC \uC804\uCCB4 \uD569\uC0B0.';
   try{
     var proxy=(localStorage.getItem('modu_proxy')||'').replace(/\/$/,'');
     if(proxy){
-      var r=await fetch(proxy+'/stats',{method:'POST'});
-      if(r.ok){ var j=await r.json(); if(j&&j.total!=null){ el.innerHTML='\uD83D\uDC65 \uCD1D <b>'+(+j.total).toLocaleString()+'</b> \u00B7 \uC624\uB298 <b>'+(+j.today||1).toLocaleString()+'</b>'; el.title='\uC804\uCCB4 \uB204\uC801 \uBC29\uBB38 \u00B7 \uC624\uB298 \uBC29\uBB38(\uC11C\uBC84 \uC9D1\uACC4)'; } }
+      var r=await fetch(proxy+'/stats?uid='+encodeURIComponent(uid),{method:'POST'});
+      if(r.ok){ var j=await r.json(); if(j&&j.total!=null){ el.innerHTML='\uD83D\uDC65 \uCD1D <b>'+(+j.total).toLocaleString()+'</b> \u00B7 \uC624\uB298 <b>'+(+j.today||1).toLocaleString()+'</b>'; el.title='\uC804\uCCB4 \uACE0\uC720 \uBC29\uBB38\uC790 \u00B7 \uC624\uB298 \uACE0\uC720 \uBC29\uBB38\uC790(\uC11C\uBC84 \uC9D1\uACC4)'; } }
     }
   }catch(e){}
 }
@@ -2478,7 +2492,7 @@ async function submitGate(){
     } else { msg.className='gate-msg err'; msg.textContent='유효하지 않은 코드예요. 카페에서 받은 코드를 확인하세요.'; }
   }catch(e){ msg.className='gate-msg err'; msg.textContent='서버 연결 실패. 인터넷·서버 주소를 확인하세요.'; }
 }
-function resetAccess(){ try{ localStorage.removeItem('modu_access'); }catch(e){} location.reload(); }
+function resetAccess(){ if(!confirm('로그아웃할까요? 다음에 접속 코드를 다시 입력해야 해요.')) return; try{ localStorage.removeItem('modu_access'); }catch(e){} location.reload(); }
 
 /* ---- init ---- */
 (function init(){

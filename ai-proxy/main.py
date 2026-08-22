@@ -355,13 +355,21 @@ def realprice_avg(lawd_cd: str, months: int = 3, base_ymd: str = "", area_min: f
             **_pyeong_range(all_pyeong)}
 
 
-_STATS = {"total": 0, "days": {}}
+_STATS = {"uids": set(), "days": {}}  # uids: 전체 고유 방문자, days: {날짜: 고유 방문자 집합}
 
 @app.post("/stats")
-def stats():
-    """방문 누적/오늘 집계 (인메모리; 영구 보관은 파일/DB 권장)."""
-    from datetime import date
-    _STATS["total"] += 1
-    d = str(date.today())
-    _STATS["days"][d] = _STATS["days"].get(d, 0) + 1
-    return {"total": _STATS["total"], "today": _STATS["days"][d]}
+def stats(uid: str = ""):
+    """고유 방문자 집계(사람 수). uid(기기 고유 ID)로 중복 제거 → 새로고침은 늘지 않음.
+    인메모리라 서버 재시작 시 초기화됩니다(영구 보관은 파일/DB 권장)."""
+    from datetime import date, timedelta
+    today_s = str(date.today())
+    cutoff = str(date.today() - timedelta(days=30))
+    for d in list(_STATS["days"].keys()):
+        if d < cutoff:
+            del _STATS["days"][d]
+    if uid:
+        _STATS["uids"].add(uid)
+        _STATS["days"].setdefault(today_s, set()).add(uid)
+    total = len(_STATS["uids"])
+    today = len(_STATS["days"].get(today_s, set()))
+    return {"total": total, "today": today}
