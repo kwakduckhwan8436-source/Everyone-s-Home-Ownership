@@ -5,7 +5,7 @@
 <style>
 :root{
   --ink:#1b2436; --ink-2:#465a75; --ink-3:#8090a4;
-  --accent:#3466d6; --accent-soft:#e7edfb; --accent-ink:#284fb0;
+  --accent:#24478f; --accent-soft:#e4eaf5; --accent-ink:#1a356e;
   --paper:#f6f7f9; --card:#ffffff; --line:#e9edf2; --line-2:#f0f3f6;
   --grid:#e0e7ec;
   --brass:#b7842b; --brass-soft:#ecdcb8;
@@ -802,6 +802,88 @@ body.gated{overflow:hidden}
 body:not(.tier-premium) [data-premium]{display:none!important}
 .logout-btn{display:none}
 body.tier-basic .logout-btn,body.tier-premium .logout-btn{display:inline-flex}
+
+
+/* ===== 개편: 비주얼 통일(React) ===== */
+.tbl .n,.tbl td.n{color:var(--ink)!important;font:inherit!important;font-weight:600!important;font-variant-numeric:tabular-nums!important}
+.tbl th.n{color:var(--ink-3)!important}
+.card{border-radius:14px!important;border:1px solid var(--line)!important;box-shadow:var(--shadow)!important}
+.tabs{gap:6px!important}
+.tabs button{border-radius:10px!important}
+/* 링크바: 조용하고 컴팩트하게 */
+.linkbar{padding:7px 16px!important;gap:6px!important;opacity:.92}
+.linkbar a{font-size:12px!important;padding:5px 10px!important;font-weight:600!important;background:var(--card)!important;border:1px solid var(--line)!important;color:var(--ink-2)!important}
+.linkbar a:hover{border-color:var(--accent)!important;color:var(--accent-ink)!important}
+
+/* 개편②: React 헤더 드롭다운(플로팅, React DOM 미접촉) */
+.linkbar{display:none!important}
+#floatMenu{position:fixed;top:10px;right:14px;z-index:9000}
+#floatMenuBtn{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.92);border:1px solid var(--line,#e9edf2);border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:700;color:var(--ink-2,#465a75);cursor:pointer;box-shadow:0 2px 8px rgba(18,41,63,.12)}
+#floatMenuBtn:hover{border-color:var(--accent,#3466d6);color:var(--accent-ink,#284fb0)}
+#floatMenuList{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--line,#e9edf2);border-radius:12px;box-shadow:0 10px 34px rgba(18,41,63,.18);padding:6px;min-width:200px;display:none}
+#floatMenuList.on{display:block}
+#floatMenuList .sec{font-size:11px;font-weight:800;color:var(--ink-3,#8090a4);padding:8px 12px 4px}
+#floatMenuList a{display:block;padding:9px 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--ink-2,#465a75);text-decoration:none;white-space:nowrap}
+#floatMenuList a:hover{background:var(--accent-soft,#e7edfb);color:var(--accent-ink,#284fb0)}
+@media(max-width:640px){#floatMenu{top:8px;right:10px}#floatMenuBtn span{display:none}}
+
+/* 개편 마감(React): 탭/토글 네이비 폴리시 */
+.tabs button.on{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important}
+.tabs button{font-weight:700}
+.view-toggle button.on{background:var(--accent)!important;border-color:var(--accent)!important;color:#fff!important}
+.ch .n{background:var(--accent-soft)!important;color:var(--accent-ink)!important}
+.olink:hover{border-color:var(--accent)!important}
+
+/* ========================================================
+   심플·고급 테마 (최종 오버라이드) — 여백↑ 노이즈↓ 클릭영역↑
+   ======================================================== */
+:root{ --r:16px; --tap:46px; --hair:#eef1f5; }
+/* 본문 리듬: 여백 넉넉하게 */
+.app{padding:22px!important}
+.results{gap:16px!important}
+#analysisCore{gap:16px!important}
+@media(max-width:640px){ .app{padding:14px!important} .results{gap:13px!important} }
+
+/* 카드: 담백하고 부드럽게(테두리 옅게·그림자 은은·패딩 여유) */
+.card{
+  border-radius:var(--r)!important;
+  border:1px solid var(--hair)!important;
+  box-shadow:0 1px 2px rgba(20,40,70,.04),0 14px 30px rgba(20,40,70,.045)!important;
+  padding:22px!important; background:#fff!important;
+}
+@media(max-width:640px){ .card{padding:17px!important} }
+
+/* 카드 헤더: 아이콘 배지 flat(배경 제거) + 제목 또렷 */
+.ch{gap:9px!important; margin-bottom:12px!important; align-items:center}
+.ch h3{font-size:16px!important; font-weight:750!important; letter-spacing:-.01em; color:var(--ink)}
+.ch .n{background:transparent!important; box-shadow:none!important; width:auto!important; height:auto!important; min-width:0!important; padding:0!important; font-size:18px!important; color:inherit!important}
+
+/* 버튼: 크고 누르기 쉽게(터치 46px) */
+.btn{min-height:var(--tap); padding:0 18px!important; border-radius:12px!important; font-size:14.5px!important; font-weight:700!important; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:transform .12s,box-shadow .12s,filter .12s}
+.btn:active{transform:translateY(1px)}
+.btn.accent{box-shadow:0 5px 16px rgba(36,71,143,.22)}
+.btn.accent:hover{filter:brightness(1.05)}
+
+/* 탭: 큼직·명확·확실한 활성 */
+.tabs{gap:6px!important}
+.tabs button{min-height:42px; padding:0 16px!important; border-radius:12px!important; font-size:14px!important; font-weight:700!important}
+.tabs button.on{background:var(--accent)!important; color:#fff!important; border-color:var(--accent)!important; box-shadow:0 5px 16px rgba(36,71,143,.24)!important}
+
+/* 클릭 가능한 요소는 확실히 '눌러지는' 느낌 */
+.lev,.sc-item,.olink{cursor:pointer; transition:transform .12s,box-shadow .12s,border-color .12s}
+.lev:hover,.sc-item:hover,.olink:hover{transform:translateY(-1px); box-shadow:0 8px 20px rgba(20,40,70,.08); border-color:var(--accent)!important}
+.olink{border-radius:12px!important; min-height:var(--tap)}
+
+/* 입력: 넉넉하고 또렷 */
+.inputs input,.inputs select,.f input,.f select{min-height:44px!important; border-radius:10px!important; font-size:14px!important}
+
+/* 보조 텍스트·구분 톤 정리(과한 색 억제) */
+.muted{color:#8a97a8!important}
+.reg-note{border-radius:12px!important}
+
+/* 뷰 토글·메뉴 pill */
+.view-toggle button{min-height:40px; border-radius:999px!important}
+.hmenu,#floatMenuList{border-radius:14px!important}
 
 </style></head>
 <body>
@@ -3458,4 +3540,18 @@ reg("policy/policy-2026-08.json", function(exports, require, module){ module.exp
 }; });
 makeRequire("")("main");
 } catch (e) { document.getElementById('root').innerHTML = '<pre style="padding:24px;white-space:pre-wrap;color:#bf4d33">'+String((e&&e.stack)||e)+'</pre>'; }
-</script></body></html>
+</script>
+<div id="floatMenu">
+  <button id="floatMenuBtn" type="button" aria-label="관련 서비스 메뉴" onclick="(function(e){var l=document.getElementById('floatMenuList');l.classList.toggle('on');})(event)">⋯ <span>메뉴</span></button>
+  <div id="floatMenuList" role="menu">
+    <div class="sec">관련 서비스</div>
+    <a href="https://cafe.naver.com/aiprogram1" target="_blank" rel="noopener noreferrer">🏛️ AI재테크연구소</a>
+    <a href="https://ai-app-tech.onrender.com/" target="_blank" rel="noopener noreferrer">🗺️ 부의 로드맵</a>
+    <a href="https://shared-research-monitor.onrender.com/" target="_blank" rel="noopener noreferrer">🔎 모두의 리서치</a>
+    <a href="https://calculator-9zyb.onrender.com/" target="_blank" rel="noopener noreferrer">🧮 모두의 계산기</a>
+    <a href="https://product-sourcing-1.onrender.com/" target="_blank" rel="noopener noreferrer">📦 소싱 작업대</a>
+    <a href="https://ai-app-tech.onrender.com/portfolio.html" target="_blank" rel="noopener noreferrer">💼 월급 포트폴리오</a>
+  </div>
+</div>
+<script>document.addEventListener('click',function(e){var w=e.target.closest&&e.target.closest('#floatMenu');if(!w){var l=document.getElementById('floatMenuList');if(l)l.classList.remove('on');}});</script>
+</body></html>
